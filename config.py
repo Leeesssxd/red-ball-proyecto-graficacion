@@ -11,19 +11,20 @@ TITLE = "RED BALL ARCADE"
 FPS = 60
 VSYNC = True
 
-# Physics (time-based)
-GRAVITY = 1800.0
-TERMINAL_VEL = 1200.0
-COYOTE_TIME = 0.10
-JUMP_BUFFER_TIME = 0.12
-
-# Legacy physics aliases (frame-based systems)
+# Physics (frame-based active gameplay)
+GRAVITY = 0.60
 MAX_FALL = 19.5
 JUMP_FORCE = -14.2
 FRICTION = 0.84
 AIR_FRICTION = 0.94
 ACCEL = 0.95
 MAX_SPEED = 8.4
+
+# Physics (time-based modules, optional/new architecture)
+GRAVITY_PPS = 1800.0
+TERMINAL_VEL = 1200.0
+COYOTE_TIME = 0.10
+JUMP_BUFFER_TIME = 0.12
 
 # Colours
 C_BG = (8, 8, 20)
