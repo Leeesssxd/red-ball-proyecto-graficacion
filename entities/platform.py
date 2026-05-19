@@ -1,0 +1,76 @@
+"""Platform entity – static, moving, or crumbling."""
+import pygame
+from config import C_PLATFORM, C_PLAT_TOP, C_PLAT_SIDE, TILE
+from utils.helpers import draw_platform, lerp
+
+
+class Platform:
+    KIND_STATIC   = "static"
+    KIND_MOVING   = "moving"
+    KIND_CRUMBLE  = "crumble"
+
+    def __init__(self, x, y, w, h,
+                 kind=KIND_STATIC,
+                 move_range=0, move_speed=1.5, move_axis="x",
+                 colour_top=None, colour_side=None):
+        self.rect        = pygame.Rect(x, y, w, h)
+        self._origin_x   = x
+        self._origin_y   = y
+        self.kind        = kind
+        self.move_range  = move_range
+        self.move_speed  = move_speed
+        self.move_axis   = move_axis
+        self._t          = 0.0
+
+        # crumble state
+        self.crumble_timer = 0
+        self.crumble_max   = 90   # frames before it disappears
+        self.crumbling     = False
+        self.gone          = False
+
+        self.col_top  = colour_top  or C_PLAT_TOP
+        self.col_side = colour_side or C_PLAT_SIDE
+
+    # ── update ───────────────────────────────────────────────
+    def update(self):
+        if self.kind == self.KIND_MOVING:
+            import math
+            self._t += 0.02
+            offset = math.sin(self._t * self.move_speed) * self.move_range
+            if self.move_axis == "x":
+                self.rect.x = int(self._origin_x + offset)
+            else:
+                self.rect.y = int(self._origin_y + offset)
+
+        if self.crumbling:
+            self.crumble_timer += 1
+            if self.crumble_timer >= self.crumble_max:
+                self.gone = True
+
+    def trigger_crumble(self):
+        if self.kind == self.KIND_CRUMBLE and not self.crumbling:
+            self.crumbling = True
+
+    # ── draw ─────────────────────────────────────────────────
+    def draw(self, surface, cam):
+        if self.gone:
+            return
+        r = cam.apply(self.rect)
+
+        if self.crumbling:
+            ratio = 1.0 - self.crumble_timer / self.crumble_max
+            # shake + fade
+            import random, math
+            shake = int(4 * (1 - ratio))
+            r = r.move(random.randint(-shake, shake),
+                       random.randint(-shake, shake))
+            alpha_surf = pygame.Surface((r.width, r.height + 14), pygame.SRCALPHA)
+            col_t = tuple(int(c * ratio) for c in self.col_top)
+            col_s = tuple(int(c * ratio) for c in self.col_side)
+            draw_platform(alpha_surf,
+                          pygame.Rect(0, 0, r.width, r.height),
+                          col_t, col_s)
+            surface.blit(alpha_surf, (r.x, r.y))
+            return
+
+        draw_platform(surface, r, self.col_top, self.col_side)
