@@ -133,6 +133,11 @@ class GameLoop:
             self.audio.play("goal")
         if events.get("died"):
             self.audio.play("death")
+        if events.get("player_hit"):
+            self.audio.play("hurt")
+
+        if events.get("secret_locked"):
+            self.overlay.show("SECRET GATE LOCKED", f"Need 3 relics ({len(self.lm.special_coins)}/3)", duration=1.8, colour=(220, 235, 255))
 
         player = lvl.player if lvl else None
         if player and not player.alive:
@@ -140,21 +145,26 @@ class GameLoop:
             self._dead_wait = 1.2
             self.overlay.show("FALLEN", "R restart   ESC quit", duration=999.0, colour=(210, 230, 255))
 
-        if player and player.hurt_timer > 0:
-            self.audio.play("hurt")
-
         if player and player.won:
+            if self.lm.index == 4:
+                self.lm.try_unlock_secret()
             advanced = self.lm.next_level()
             if advanced:
                 self._timer = 0.0
                 self.parts = ParticleSystem()
                 nxt = self.lm.current.biome if hasattr(self.lm.current, "biome") else self.lm.current.title
-                self.overlay.show("AREA CLEAR", f"Next: {nxt}", duration=1.8, colour=C_CYAN)
+                if self.lm.index == 5:
+                    self.overlay.show("SECRET UNLOCKED", f"Entering: {nxt}", duration=2.0, colour=C_CYAN)
+                else:
+                    self.overlay.show("AREA CLEAR", f"Next: {nxt}", duration=1.8, colour=C_CYAN)
             else:
                 mins = int(self._run_timer) // 60
                 secs = int(self._run_timer) % 60
                 self._time_str = f"{mins:02d}:{secs:02d}"
                 self._state = self.STATE_ALL_WIN
+
+        if lvl:
+            self.bg.set_theme(lvl.theme)
 
         cam_x = cam.x if cam else 0
         cam_y = cam.y if cam else 0
@@ -163,7 +173,7 @@ class GameLoop:
         self.lm.draw(self.screen)
 
         if lvl and player:
-            self.hud.draw(self.screen, lvl.title, self.lm.index + 1, self.lm.total, player, self._run_timer)
+            self.hud.draw(self.screen, lvl.title, self.lm.index + 1, self.lm.total, player, self._run_timer, len(self.lm.special_coins), self.lm.secret_unlocked)
             self.hud.draw_progress_bar(self.screen, player.x, lvl.level_w)
 
         self.overlay.draw(self.screen)
@@ -172,6 +182,8 @@ class GameLoop:
     def _tick_dead(self, dt):
         lvl = self.lm.current
         cam = self.lm.camera
+        if lvl:
+            self.bg.set_theme(lvl.theme)
         cam_x = cam.x if cam else 0
         cam_y = cam.y if cam else 0
         self.bg.draw(self.screen, cam_x, cam_y, self._run_timer)
@@ -187,6 +199,8 @@ class GameLoop:
     def _tick_all_win(self, dt):
         lvl = self.lm.current
         cam = self.lm.camera
+        if lvl:
+            self.bg.set_theme(lvl.theme)
         cam_x = cam.x if cam else 0
         cam_y = cam.y if cam else 0
         self.bg.draw(self.screen, cam_x, cam_y, self._run_timer)
@@ -194,5 +208,5 @@ class GameLoop:
         self.parts.draw(self.screen, cam_x, cam_y)
         self.lm.draw(self.screen)
         self.win_scr.update(dt)
-        self.win_scr.draw(self.screen, self._time_str)
+        self.win_scr.draw(self.screen, self._time_str, len(self.lm.special_coins), self.lm.secret_unlocked)
         self.audio.update_music(dt, active=True)

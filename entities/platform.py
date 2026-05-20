@@ -18,6 +18,9 @@ class Platform:
         self.move_speed = move_speed
         self.move_axis = move_axis
         self._t = 0.0
+        self.dx = 0
+        self.dy = 0
+
         self.crumble_timer = 0
         self.crumble_max = 90
         self.crumbling = False
@@ -27,6 +30,9 @@ class Platform:
         self.col_side = colour_side or C_PLAT_SIDE
 
     def update(self):
+        self.dx = 0
+        self.dy = 0
+        oldx, oldy = self.rect.x, self.rect.y
         if self.kind == self.KIND_MOVING:
             import math
             self._t += 0.02
@@ -35,6 +41,8 @@ class Platform:
                 self.rect.x = int(self._origin_x + offset)
             else:
                 self.rect.y = int(self._origin_y + offset)
+        self.dx = self.rect.x - oldx
+        self.dy = self.rect.y - oldy
 
         if self.crumbling:
             self.crumble_timer += 1
@@ -69,3 +77,10 @@ class Platform:
         shine = pygame.Surface((r.width, max(2, r.height // 4)), pygame.SRCALPHA)
         shine.fill((235, 250, 255, 28))
         surface.blit(shine, (r.x, r.y + 2))
+
+        # small props: snow mounds
+        seed = (self.rect.x * 73856093 + self.rect.y * 19349663) & 0xFFFFFFFF
+        if seed % 3 == 0 and r.width > 70:
+            pygame.draw.ellipse(surface, (230, 248, 255), (r.x + 8, r.y - 6, 24, 8))
+        if seed % 5 == 0 and r.width > 120:
+            pygame.draw.ellipse(surface, (210, 236, 248), (r.right - 34, r.y - 5, 20, 7))

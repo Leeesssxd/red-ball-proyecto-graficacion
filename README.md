@@ -1,6 +1,6 @@
-# RedBall – Arcade Futuristic
+# Frostbound Paws
 
-A pseudo-3D arcade platformer built with Python + Pygame.
+A 2D pixel-art arctic platformer built with Python + Pygame.
 
 ## Quick Start
 
@@ -11,55 +11,25 @@ python main.py
 
 ## Controls
 
-| Key | Action |
-|-----|--------|
-| ← / A | Move left |
-| → / D | Move right |
-| SPACE / ↑ / W | Jump (coyote-time + jump buffer) |
-| R | Restart current level |
-| ESC | Quit |
+- `← / A`: Move left
+- `→ / D`: Move right
+- `SPACE / ↑ / W`: Jump
+- `R`: Restart current level
+- `ESC`: Quit
 
-## Levels
+## Campaign Structure
 
-| # | Title | Key mechanic |
-|---|-------|-------------|
-| 1 | Launch Pad | Moving platforms, crumble tiles, bounce pad |
-| 2 | Sky Bridge | Narrow jumps, vertical movers, crumble bridge |
+- Level 1: Tundra intro
+- Level 2: Miniboss + relic 1
+- Level 3: Miniboss + relic 2
+- Level 4: Miniboss + relic 3
+- Level 5: Final boss
+- Secret Level: Unlocks if 3 relics were collected
 
-## Architecture
+## Notes
 
-```
-redball_python/
-├── main.py            Entry point
-├── config.py          Global constants (physics, colours, screen)
-├── core/
-│   └── game_loop.py   State machine, main loop
-├── entities/
-│   ├── player.py      Ball physics + collision resolution
-│   ├── platform.py    Static / moving / crumbling platforms
-│   ├── obstacle.py    Spikes + bounce pads
-│   └── goal.py        Animated star goal
-├── graphics/
-│   ├── camera.py      Smooth-follow camera
-│   ├── background.py  Parallax grid + star field
-│   └── particles.py   Jump dust, death burst, goal sparks
-├── levels/
-│   ├── level_data.py  Level definitions (pure data)
-│   └── level_manager.py  Load, update, transition
-├── ui/
-│   ├── hud.py         Timer, progress bar, controls hint
-│   └── menu.py        Title screen, win screen
-└── utils/
-    ├── vec2.py        2-D vector class
-    └── helpers.py     lerp, clamp, draw helpers
-```
-
-## Extending
-
-- **Add a level**: append a dict to `LEVELS` in `levels/level_data.py` and increment `TOTAL_LEVELS` in `config.py`.
-- **Tweak physics**: edit constants in `config.py` (GRAVITY, JUMP_FORCE, ACCEL, MAX_SPEED …).
-- **New entity**: create a class in `entities/`, register it in `entities/__init__.py`, add to `Level._load()` and `Level.update/draw()`.
-
-## Assets
-
-The game is fully procedural – no external images or audio required. All rendering uses `pygame.draw.*`.
+- Runtime architecture remains: `main.py -> GameLoop -> LevelManager`.
+- Backgrounds are image/theme based and optimized to screen size.
+- Included local backgrounds:
+  - `assets/backgrounds/nivel_final.jpg`
+  - `assets/backgrounds/nivel_final_secreto.jpg`

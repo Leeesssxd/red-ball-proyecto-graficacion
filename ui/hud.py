@@ -7,7 +7,7 @@ from config import SCREEN_W, SCREEN_H, C_HUD_TEXT, C_CYAN, C_GOAL, C_WHITE
 class HUD:
     def __init__(self):
         pygame.font.init()
-        self._font_big = pygame.font.SysFont("consolas", 26, bold=True)
+        self._font_big = pygame.font.SysFont("consolas", 24, bold=True)
         self._font_med = pygame.font.SysFont("consolas", 18)
         self._font_sm = pygame.font.SysFont("consolas", 14)
         self._elapsed = 0.0
@@ -15,8 +15,8 @@ class HUD:
     def update(self, dt):
         self._elapsed += dt
 
-    def draw(self, surface, level_title, level_num, total_levels, player, timer_secs):
-        panel = pygame.Surface((500, 82), pygame.SRCALPHA)
+    def draw(self, surface, level_title, level_num, total_levels, player, timer_secs, coin_count, secret_unlocked):
+        panel = pygame.Surface((560, 90), pygame.SRCALPHA)
         panel.fill((8, 18, 34, 178))
         pygame.draw.rect(panel, (130, 225, 255, 100), panel.get_rect(), 1)
         surface.blit(panel, (10, 10))
@@ -28,7 +28,14 @@ class HUD:
         secs = int(timer_secs) % 60
         ms = int((timer_secs % 1) * 100)
         tim = self._font_med.render(f"TIME {mins:02d}:{secs:02d}.{ms:02d}", True, C_HUD_TEXT)
-        surface.blit(tim, (18, 48))
+        surface.blit(tim, (18, 46))
+
+        coin_txt = self._font_med.render(f"Relics: {coin_count}/3", True, (236, 246, 255))
+        surface.blit(coin_txt, (240, 46))
+        gate = "Secret Gate: OPEN" if secret_unlocked else "Secret Gate: LOCKED"
+        gate_col = (150, 240, 255) if secret_unlocked else (220, 230, 255)
+        gate_txt = self._font_sm.render(gate, True, gate_col)
+        surface.blit(gate_txt, (420, 50))
 
         if self._elapsed < 8.0:
             alpha = int(255 * min(1.0, (8.0 - self._elapsed) / 1.8))

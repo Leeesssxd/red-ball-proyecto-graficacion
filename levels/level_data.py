@@ -1,118 +1,198 @@
-"""Arctic level definitions: 9 stages + final boss."""
-
-
-BIOMES = [
-    "Tundra Dawn",
-    "Snow Drift",
-    "Frozen Bridges",
-    "Blizzard Lane",
-    "Ice Cavern",
-    "Glacial Teeth",
-    "Aurora Shelf",
-    "Iceberg Rush",
-    "Polar Citadel",
-]
-
-
-def _make_level(idx, title, spawn_y=520):
-    base_w = 4600 + idx * 430
-    y_base = 610 - min(180, idx * 14)
-    x = 0
-    platforms = []
-    spikes = []
-    bounce_pads = []
-
-    platforms.append({"x": 0, "y": y_base + 40, "w": 520, "h": 28})
-    x = 560
-    step = 0
-    while x < base_w - 620:
-        width = 120 + (step % 4) * 28
-        y = y_base - (step % 5) * 30 + ((step // 3) % 2) * 18
-        pd = {"x": x, "y": y, "w": width, "h": 28}
-
-        if step % 7 == 3:
-            pd.update({"kind": "moving", "move_range": 70 + (idx % 3) * 24, "move_speed": 1.1 + idx * 0.08, "move_axis": "y" if step % 2 else "x"})
-        elif step % 8 == 5:
-            pd.update({"kind": "crumble"})
-
-        platforms.append(pd)
-
-        if step % 6 == 2 and idx > 1:
-            spikes.append({"x": x + 14, "y": y - 24, "w": 28, "h": 24})
-        if step % 11 == 6:
-            bounce_pads.append({"x": x + width // 2 - 36, "y": y - 16, "w": 72, "h": 16, "boost": -20 - min(4, idx // 2)})
-
-        x += width + 84 + (step % 3) * 24
-        step += 1
-
-    finish_x = base_w - 350
-    finish_y = y_base - 210
-    platforms.append({"x": finish_x - 130, "y": finish_y + 70, "w": 200, "h": 28})
-    platforms.append({"x": finish_x + 60, "y": finish_y + 20, "w": 280, "h": 28, "colour_top": (215, 245, 255), "colour_side": (95, 150, 190)})
-
-    return {
-        "title": f"Level {idx} - {title}",
-        "biome": title,
-        "spawn": (120, spawn_y),
-        "level_w": base_w,
-        "level_h": 900,
-        "kill_y": 860,
-        "platforms": platforms,
-        "spikes": spikes,
-        "bounce_pads": bounce_pads,
-        "goal": {"x": finish_x + 220, "y": finish_y - 8, "size": 40},
-    }
-
+"""Curated 6-level campaign: 4 main + final + secret."""
 
 LEVELS = [
-    _make_level(1, BIOMES[0], 540),
-    _make_level(2, BIOMES[1], 500),
-    _make_level(3, BIOMES[2], 510),
-    _make_level(4, BIOMES[3], 480),
-    _make_level(5, BIOMES[4], 500),
-    _make_level(6, BIOMES[5], 470),
-    _make_level(7, BIOMES[6], 500),
-    _make_level(8, BIOMES[7], 470),
-    _make_level(9, BIOMES[8], 460),
     {
-        "title": "Level 10 - Frost Guardian",
-        "biome": "Boss Arena",
-        "spawn": (180, 520),
-        "level_w": 3600,
+        "id": "l1",
+        "title": "Level 1 - Tundra Trail",
+        "biome": "Tundra Intro",
+        "theme": "tundra_day",
+        "spawn": (120, 520),
+        "level_w": 4200,
         "level_h": 900,
         "kill_y": 860,
         "platforms": [
-            {"x": 0, "y": 640, "w": 900, "h": 28},
-            {"x": 980, "y": 590, "w": 180, "h": 28},
-            {"x": 1240, "y": 560, "w": 190, "h": 28},
-            {"x": 1520, "y": 535, "w": 190, "h": 28},
-            {"x": 1800, "y": 510, "w": 220, "h": 28},
-            {"x": 2120, "y": 510, "w": 260, "h": 28, "kind": "moving", "move_range": 100, "move_speed": 1.4, "move_axis": "x"},
-            {"x": 2480, "y": 510, "w": 220, "h": 28},
-            {"x": 2780, "y": 510, "w": 480, "h": 28, "colour_top": (215, 245, 255), "colour_side": (95, 150, 190)},
+            {"x": 0, "y": 620, "w": 560, "h": 28},
+            {"x": 640, "y": 590, "w": 190, "h": 28},
+            {"x": 900, "y": 560, "w": 180, "h": 28},
+            {"x": 1140, "y": 530, "w": 220, "h": 28},
+            {"x": 1460, "y": 500, "w": 200, "h": 28},
+            {"x": 1720, "y": 460, "w": 220, "h": 28},
+            {"x": 2000, "y": 420, "w": 180, "h": 28, "kind": "crumble"},
+            {"x": 2240, "y": 420, "w": 180, "h": 28, "kind": "crumble"},
+            {"x": 2500, "y": 390, "w": 240, "h": 28},
+            {"x": 2800, "y": 430, "w": 240, "h": 28},
+            {"x": 3100, "y": 470, "w": 260, "h": 28},
+            {"x": 3480, "y": 430, "w": 260, "h": 28},
+            {"x": 3780, "y": 390, "w": 320, "h": 28, "colour_top": (215, 245, 255), "colour_side": (95, 150, 190)},
         ],
-        "spikes": [{"x": 1000, "y": 566, "w": 28, "h": 24}, {"x": 1030, "y": 566, "w": 28, "h": 24}],
-        "bounce_pads": [{"x": 1860, "y": 494, "w": 72, "h": 16, "boost": -24}],
-        "goal": {"x": 3300, "y": 490, "size": 42},
-        "boss": {"x": 2900, "y": 500},
+        "spikes": [
+            {"x": 2050, "y": 396, "w": 28, "h": 24},
+            {"x": 2080, "y": 396, "w": 28, "h": 24},
+        ],
+        "bounce_pads": [{"x": 3140, "y": 454, "w": 72, "h": 16, "boost": -22}],
+        "goal": {"x": 3980, "y": 370, "size": 40},
+    },
+    {
+        "id": "l2",
+        "title": "Level 2 - Frost Timber",
+        "biome": "Cold Forest",
+        "theme": "forest_blue",
+        "spawn": (120, 500),
+        "level_w": 5000,
+        "level_h": 900,
+        "kill_y": 860,
+        "platforms": [
+            {"x": 0, "y": 600, "w": 540, "h": 28},
+            {"x": 620, "y": 560, "w": 170, "h": 28},
+            {"x": 860, "y": 520, "w": 170, "h": 28},
+            {"x": 1080, "y": 490, "w": 210, "h": 28},
+            {"x": 1360, "y": 470, "w": 170, "h": 28, "kind": "moving", "move_range": 85, "move_speed": 1.2, "move_axis": "x"},
+            {"x": 1600, "y": 450, "w": 220, "h": 28},
+            {"x": 1900, "y": 430, "w": 220, "h": 28},
+            {"x": 2180, "y": 410, "w": 220, "h": 28},
+            {"x": 2480, "y": 430, "w": 200, "h": 28},
+            {"x": 2760, "y": 470, "w": 240, "h": 28},
+            {"x": 3100, "y": 500, "w": 240, "h": 28},
+            {"x": 3420, "y": 460, "w": 240, "h": 28},
+            {"x": 3740, "y": 420, "w": 230, "h": 28},
+            {"x": 4040, "y": 380, "w": 230, "h": 28},
+            {"x": 4360, "y": 350, "w": 400, "h": 28, "colour_top": (215, 245, 255), "colour_side": (95, 150, 190)},
+        ],
+        "spikes": [{"x": 2520, "y": 406, "w": 28, "h": 24}, {"x": 2550, "y": 406, "w": 28, "h": 24}],
+        "bounce_pads": [
+            {"x": 1408, "y": 454, "w": 72, "h": 16, "boost": -23, "attach_platform": 4},
+            {"x": 3140, "y": 484, "w": 72, "h": 16, "boost": -22},
+        ],
+        "goal": {"x": 4580, "y": 330, "size": 40},
+        "boss": {"x": 2960, "y": 470, "tier": "mini", "coin_id": 1},
+    },
+    {
+        "id": "l3",
+        "title": "Level 3 - Glacier Echo",
+        "biome": "Glacier Cavern",
+        "theme": "dusk_violet",
+        "spawn": (120, 520),
+        "level_w": 5600,
+        "level_h": 900,
+        "kill_y": 860,
+        "platforms": [
+            {"x": 0, "y": 620, "w": 500, "h": 28},
+            {"x": 580, "y": 580, "w": 140, "h": 28},
+            {"x": 800, "y": 540, "w": 150, "h": 28},
+            {"x": 1030, "y": 500, "w": 170, "h": 28},
+            {"x": 1280, "y": 460, "w": 150, "h": 28, "kind": "moving", "move_range": 100, "move_speed": 1.4, "move_axis": "y"},
+            {"x": 1540, "y": 440, "w": 220, "h": 28},
+            {"x": 1840, "y": 430, "w": 120, "h": 28, "kind": "crumble"},
+            {"x": 2000, "y": 430, "w": 120, "h": 28, "kind": "crumble"},
+            {"x": 2160, "y": 430, "w": 120, "h": 28, "kind": "crumble"},
+            {"x": 2360, "y": 410, "w": 260, "h": 28},
+            {"x": 2700, "y": 450, "w": 240, "h": 28},
+            {"x": 3020, "y": 490, "w": 240, "h": 28},
+            {"x": 3360, "y": 450, "w": 220, "h": 28, "kind": "moving", "move_range": 90, "move_speed": 1.3, "move_axis": "x"},
+            {"x": 3660, "y": 420, "w": 220, "h": 28},
+            {"x": 3980, "y": 390, "w": 220, "h": 28},
+            {"x": 4300, "y": 360, "w": 220, "h": 28},
+            {"x": 4640, "y": 330, "w": 220, "h": 28},
+            {"x": 4980, "y": 300, "w": 420, "h": 28, "colour_top": (215, 245, 255), "colour_side": (95, 150, 190)},
+        ],
+        "spikes": [{"x": 2380, "y": 386, "w": 28, "h": 24}, {"x": 2410, "y": 386, "w": 28, "h": 24}, {"x": 4310, "y": 336, "w": 28, "h": 24}],
+        "bounce_pads": [
+            {"x": 1320, "y": 444, "w": 72, "h": 16, "boost": -24, "attach_platform": 4},
+            {"x": 3400, "y": 440, "w": 72, "h": 16, "boost": -24, "attach_platform": 12},
+        ],
+        "goal": {"x": 5250, "y": 280, "size": 42},
+        "boss": {"x": 3510, "y": 430, "tier": "mini", "coin_id": 2},
+    },
+    {
+        "id": "l4",
+        "title": "Level 4 - Storm Ridge",
+        "biome": "Ice Storm",
+        "theme": "sunset_ice",
+        "spawn": (120, 500),
+        "level_w": 6200,
+        "level_h": 900,
+        "kill_y": 860,
+        "platforms": [
+            {"x": 0, "y": 600, "w": 520, "h": 28},
+            {"x": 620, "y": 560, "w": 160, "h": 28},
+            {"x": 840, "y": 520, "w": 160, "h": 28},
+            {"x": 1060, "y": 490, "w": 180, "h": 28},
+            {"x": 1320, "y": 460, "w": 180, "h": 28},
+            {"x": 1560, "y": 430, "w": 180, "h": 28, "kind": "moving", "move_range": 110, "move_speed": 1.6, "move_axis": "x"},
+            {"x": 1820, "y": 410, "w": 210, "h": 28},
+            {"x": 2100, "y": 390, "w": 210, "h": 28},
+            {"x": 2380, "y": 370, "w": 120, "h": 28, "kind": "crumble"},
+            {"x": 2540, "y": 370, "w": 120, "h": 28, "kind": "crumble"},
+            {"x": 2700, "y": 370, "w": 120, "h": 28, "kind": "crumble"},
+            {"x": 2920, "y": 350, "w": 260, "h": 28},
+            {"x": 3260, "y": 390, "w": 250, "h": 28},
+            {"x": 3600, "y": 430, "w": 250, "h": 28},
+            {"x": 3920, "y": 470, "w": 250, "h": 28},
+            {"x": 4280, "y": 430, "w": 220, "h": 28, "kind": "moving", "move_range": 120, "move_speed": 1.8, "move_axis": "y"},
+            {"x": 4600, "y": 390, "w": 230, "h": 28},
+            {"x": 4920, "y": 350, "w": 230, "h": 28},
+            {"x": 5240, "y": 320, "w": 230, "h": 28},
+            {"x": 5580, "y": 290, "w": 520, "h": 28, "colour_top": (215, 245, 255), "colour_side": (95, 150, 190)},
+        ],
+        "spikes": [{"x": 2950, "y": 326, "w": 28, "h": 24}, {"x": 2980, "y": 326, "w": 28, "h": 24}, {"x": 3610, "y": 406, "w": 28, "h": 24}, {"x": 4930, "y": 326, "w": 28, "h": 24}],
+        "bounce_pads": [
+            {"x": 1608, "y": 414, "w": 72, "h": 16, "boost": -24, "attach_platform": 5},
+            {"x": 4320, "y": 414, "w": 72, "h": 16, "boost": -25, "attach_platform": 15},
+        ],
+        "goal": {"x": 5920, "y": 270, "size": 42},
+        "boss": {"x": 4450, "y": 400, "tier": "mini_hard", "coin_id": 3},
+    },
+    {
+        "id": "l5_final",
+        "title": "Level 5 - The Frozen Crown",
+        "biome": "Final Arena",
+        "theme": "final_image",
+        "spawn": (140, 540),
+        "level_w": 4200,
+        "level_h": 900,
+        "kill_y": 860,
+        "platforms": [
+            {"x": 0, "y": 650, "w": 900, "h": 28},
+            {"x": 980, "y": 600, "w": 220, "h": 28},
+            {"x": 1300, "y": 560, "w": 220, "h": 28},
+            {"x": 1620, "y": 530, "w": 220, "h": 28},
+            {"x": 1940, "y": 500, "w": 300, "h": 28},
+            {"x": 2360, "y": 500, "w": 260, "h": 28, "kind": "moving", "move_range": 120, "move_speed": 1.5, "move_axis": "x"},
+            {"x": 2720, "y": 500, "w": 280, "h": 28},
+            {"x": 3100, "y": 500, "w": 900, "h": 28, "colour_top": (220, 246, 255), "colour_side": (95, 150, 190)},
+        ],
+        "spikes": [{"x": 1000, "y": 576, "w": 28, "h": 24}, {"x": 1030, "y": 576, "w": 28, "h": 24}],
+        "bounce_pads": [{"x": 2408, "y": 484, "w": 72, "h": 16, "boost": -25, "attach_platform": 5}],
+        "goal": {"x": 3880, "y": 480, "size": 44},
+        "boss": {"x": 3380, "y": 490, "tier": "final"},
+        "secret_gate": True,
+    },
+    {
+        "id": "l6_secret",
+        "title": "Secret - Aurora Abyss",
+        "biome": "Secret Challenge",
+        "theme": "secret_image",
+        "spawn": (140, 530),
+        "level_w": 4600,
+        "level_h": 900,
+        "kill_y": 860,
+        "platforms": [
+            {"x": 0, "y": 640, "w": 760, "h": 28},
+            {"x": 860, "y": 590, "w": 180, "h": 28, "kind": "moving", "move_range": 150, "move_speed": 1.8, "move_axis": "y"},
+            {"x": 1120, "y": 540, "w": 180, "h": 28},
+            {"x": 1380, "y": 500, "w": 180, "h": 28, "kind": "crumble"},
+            {"x": 1600, "y": 500, "w": 180, "h": 28, "kind": "crumble"},
+            {"x": 1840, "y": 470, "w": 220, "h": 28},
+            {"x": 2160, "y": 440, "w": 220, "h": 28, "kind": "moving", "move_range": 140, "move_speed": 1.9, "move_axis": "x"},
+            {"x": 2480, "y": 410, "w": 220, "h": 28},
+            {"x": 2820, "y": 380, "w": 220, "h": 28},
+            {"x": 3160, "y": 350, "w": 220, "h": 28},
+            {"x": 3500, "y": 320, "w": 1020, "h": 28, "colour_top": (230, 250, 255), "colour_side": (100, 160, 200)},
+        ],
+        "spikes": [{"x": 1860, "y": 446, "w": 28, "h": 24}, {"x": 1890, "y": 446, "w": 28, "h": 24}, {"x": 3520, "y": 296, "w": 28, "h": 24}, {"x": 3550, "y": 296, "w": 28, "h": 24}],
+        "bounce_pads": [{"x": 898, "y": 574, "w": 72, "h": 16, "boost": -27, "attach_platform": 1}, {"x": 2198, "y": 424, "w": 72, "h": 16, "boost": -27, "attach_platform": 6}],
+        "goal": {"x": 4400, "y": 300, "size": 46},
+        "boss": {"x": 3960, "y": 310, "tier": "secret"},
+        "is_secret": True,
     },
 ]
-
-
-def _validate_levels(levels):
-    for lvl in levels:
-        plats = lvl["platforms"]
-        for i in range(len(plats)):
-            a = plats[i]
-            ax2 = a["x"] + a["w"]
-            ay2 = a["y"] + a["h"]
-            for j in range(i + 1, len(plats)):
-                b = plats[j]
-                bx2 = b["x"] + b["w"]
-                by2 = b["y"] + b["h"]
-                overlap = not (ax2 <= b["x"] or bx2 <= a["x"] or ay2 <= b["y"] or by2 <= a["y"])
-                if overlap and abs(a["y"] - b["y"]) < 8:
-                    b["x"] = bx2 + 8
-
-
-_validate_levels(LEVELS)

@@ -1,98 +1,84 @@
-"""Arctic parallax background with snow and glacial grid."""
+"""Image-based arctic background manager (no sci-fi grid)."""
+import os
 import pygame
-import math
 import random
+
 from config import SCREEN_W, SCREEN_H
-
-
-class Flake:
-    def __init__(self):
-        self.x = random.uniform(0, SCREEN_W)
-        self.y = random.uniform(0, SCREEN_H)
-        self.z = random.uniform(0.2, 1.0)
-        self.v = random.uniform(12, 44)
-
-    def update(self, dt):
-        self.y += self.v * self.z * dt
-        self.x += math.sin(self.y * 0.01) * 6 * self.z * dt
-        if self.y > SCREEN_H + 8:
-            self.y = -8
-            self.x = random.uniform(0, SCREEN_W)
-
-
-class Star:
-    def __init__(self):
-        self.x = random.uniform(0, SCREEN_W)
-        self.y = random.uniform(0, SCREEN_H)
-        self.size = random.choice([1, 1, 2])
-        self.brightness = random.randint(120, 220)
-        self.speed = random.choice([0.08, 0.16, 0.3])
-
-    def draw(self, surface, cam_x, t):
-        sx = (self.x - cam_x * self.speed) % SCREEN_W
-        tw = 0.65 + 0.35 * math.sin(t * 2.2 + self.x * 0.01)
-        v = int(self.brightness * tw)
-        col = (v, v, min(255, v + 35))
-        if self.size == 1:
-            surface.set_at((int(sx), int(self.y)), col)
-        else:
-            pygame.draw.circle(surface, col, (int(sx), int(self.y)), self.size)
 
 
 class Background:
     def __init__(self):
-        self._stars = [Star() for _ in range(180)]
-        self._flakes = [Flake() for _ in range(110)]
-        self._bg_surf = pygame.Surface((SCREEN_W, SCREEN_H))
-        self._bg_surf.fill((6, 12, 28))
+        self._cache = {}
+        self._theme = None
+        self._snow = [[random.uniform(0, SCREEN_W), random.uniform(0, SCREEN_H), random.uniform(12, 50), random.uniform(0.3, 1.0)] for _ in range(120)]
+
+    def set_theme(self, theme):
+        if self._theme != theme:
+            self._theme = theme
+            if theme not in self._cache:
+                self._cache[theme] = self._build_theme(theme)
+
+    def _load_file_bg(self, path):
+        img = pygame.image.load(path).convert()
+        iw, ih = img.get_size()
+        # Crop tiny bottom strip to reduce visible watermark artifacts
+        crop_h = max(1, int(ih * 0.94))
+        img = img.subsurface(pygame.Rect(0, 0, iw, crop_h)).copy()
+        return pygame.transform.smoothscale(img, (SCREEN_W, SCREEN_H))
+
+    def _build_theme(self, theme):
+        file_map = {
+            "final_image": os.path.join("assets", "backgrounds", "nivel_final.jpg"),
+            "secret_image": os.path.join("assets", "backgrounds", "nivel_final_secreto.jpg"),
+        }
+        if theme in file_map and os.path.exists(file_map[theme]):
+            return self._load_file_bg(file_map[theme])
+
+        surf = pygame.Surface((SCREEN_W, SCREEN_H))
+        palettes = {
+            "tundra_day": ((154, 210, 248), (220, 243, 255), (82, 126, 170), (34, 66, 102)),
+            "forest_blue": ((72, 150, 208), (180, 228, 248), (58, 110, 150), (20, 52, 90)),
+            "dusk_violet": ((170, 126, 178), (244, 202, 220), (106, 72, 120), (52, 36, 62)),
+            "sunset_ice": ((40, 132, 194), (255, 180, 120), (72, 86, 160), (24, 36, 90)),
+        }
+        top, sun, m1, m2 = palettes.get(theme, palettes["tundra_day"])
+
+        for y in range(SCREEN_H):
+            t = y / SCREEN_H
+            r = int(top[0] * (1 - t) + 12 * t)
+            g = int(top[1] * (1 - t) + 30 * t)
+            b = int(top[2] * (1 - t) + 60 * t)
+            pygame.draw.line(surf, (r, g, b), (0, y), (SCREEN_W, y))
+
+        pygame.draw.circle(surf, sun, (SCREEN_W - 220, 140), 78)
+
+        pts_far = [(0, 380), (180, 290), (360, 360), (520, 250), (700, 340), (900, 240), (1120, 360), (1280, 300), (1280, 720), (0, 720)]
+        pts_near = [(0, 470), (140, 360), (280, 430), (430, 320), (620, 455), (820, 340), (1030, 470), (1240, 360), (1280, 410), (1280, 720), (0, 720)]
+        pygame.draw.polygon(surf, m1, pts_far)
+        pygame.draw.polygon(surf, m2, pts_near)
+
+        for x in range(0, SCREEN_W, 26):
+            h = random.randint(26, 72)
+            pygame.draw.polygon(surf, (26, 44, 58), [(x, SCREEN_H - 80), (x + 12, SCREEN_H - 80 - h), (x + 24, SCREEN_H - 80)])
+
+        return surf
 
     def draw(self, surface, cam_x, cam_y, t):
-        surface.blit(self._bg_surf, (0, 0))
+        if self._theme is None:
+            self.set_theme("tundra_day")
+        base = self._cache[self._theme]
+        surface.blit(base, (0, 0))
 
-        # aurora bands
-        aur = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        for i in range(3):
-            y = int(80 + i * 60 + math.sin(t * 0.4 + i) * 20)
-            h = 70
-            pygame.draw.ellipse(aur, (90 - i * 10, 180 + i * 18, 220 + i * 8, 26 - i * 5), (-120, y, SCREEN_W + 240, h))
-        surface.blit(aur, (0, 0))
-
-        for star in self._stars:
-            star.draw(surface, cam_x, t)
-
-        self._draw_glacier_grid(surface, cam_x, t)
-
-        for fl in self._flakes:
-            fl.update(1 / 60)
-            pygame.draw.circle(surface, (220, 245, 255), (int(fl.x), int(fl.y)), 1 if fl.z < 0.7 else 2)
-
-    def _draw_glacier_grid(self, surface, cam_x, t):
-        horizon = SCREEN_H * 0.46
-        col_a = (20, 55, 90)
-        col_b = (45, 110, 160)
-
-        for i in range(18):
-            y_norm = i / 17
-            y_screen = horizon + (SCREEN_H - horizon) * (y_norm ** 1.6)
-            col = (
-                int(col_a[0] + (col_b[0] - col_a[0]) * y_norm),
-                int(col_a[1] + (col_b[1] - col_a[1]) * y_norm),
-                int(col_a[2] + (col_b[2] - col_a[2]) * y_norm),
-            )
-            pygame.draw.line(surface, col, (0, int(y_screen)), (SCREEN_W, int(y_screen)), 1)
-
-        cx = SCREEN_W // 2
-        num_vlines = 26
-        for i in range(num_vlines + 1):
-            frac = i / num_vlines
-            x_top = cx + (frac - 0.5) * SCREEN_W * 0.35
-            x_bot = frac * SCREEN_W
-            off = (cam_x * 0.05) % (SCREEN_W / num_vlines)
-            x_top -= off * 0.2
-            x_bot -= off
-            pygame.draw.line(surface, (35, 86, 130), (int(x_top), int(horizon)), (int(x_bot), SCREEN_H), 1)
-
-        scan = pygame.Surface((SCREEN_W, 4), pygame.SRCALPHA)
-        scan.fill((130, 215, 255, 30))
-        sy = int(horizon + (SCREEN_H - horizon) * ((0.5 + 0.5 * math.sin(t * 0.7)) ** 1.6))
-        surface.blit(scan, (0, sy))
+        # snow pass
+        snow_layer = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        for fl in self._snow:
+            fl[1] += fl[2] * fl[3] * (1 / 60)
+            fl[0] += fl[3] * 0.25
+            if fl[1] > SCREEN_H + 5:
+                fl[1] = -5
+                fl[0] = random.uniform(0, SCREEN_W)
+            if fl[0] > SCREEN_W + 2:
+                fl[0] = -2
+            r = 1 if fl[3] < 0.8 else 2
+            pygame.draw.circle(snow_layer, (235, 247, 255, 160), (int(fl[0]), int(fl[1])), r)
+        surface.blit(snow_layer, (0, 0))
