@@ -5,7 +5,7 @@
 import pygame
 
 SCREEN_W, SCREEN_H = 1280, 720
-TITLE = "Frostbound Paws"
+TITLE = "Garras Glaciares"
 FPS = 60
 VSYNC = True
 

@@ -1,57 +1,82 @@
-"""Title screen and win screen."""
+"""Pantalla de título y pantalla de victoria — Garras Glaciares."""
 import pygame
 import math
 from config import SCREEN_W, SCREEN_H, C_WHITE
 from utils.helpers import pulse
 
 
+def _load_font(size, bold=False):
+    """Fuente pixel art / monospace limpia."""
+    for name in ("Courier New", "Lucida Console", "Consolas", "monospace"):
+        try:
+            f = pygame.font.SysFont(name, size, bold=bold)
+            if f:
+                return f
+        except Exception:
+            pass
+    return pygame.font.Font(None, size)
+
+
 class TitleScreen:
     def __init__(self):
         pygame.font.init()
-        self._font_title = pygame.font.SysFont("impact", 102, bold=True)
-        self._font_sub = pygame.font.SysFont("consolas", 26)
-        self._font_hint = pygame.font.SysFont("consolas", 20)
+        self._font_title = _load_font(88, bold=True)
+        self._font_sub   = _load_font(24)
+        self._font_hint  = _load_font(19)
         self._t = 0.0
 
     def update(self, dt):
         self._t += dt
 
     def draw(self, surface):
-        surface.fill((7, 14, 28))
-        for i in range(0, SCREEN_W, 96):
-            pygame.draw.line(surface, (16, 38, 62), (i, 0), (i, SCREEN_H))
+        # Fondo ártico oscuro (el background real se dibuja antes)
+        # Aquí sólo renderizamos el overlay de texto sobre el fondo de Background
+        # Si el background no está disponible, pintamos nuestro fondo
+        overlay = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
+        overlay.fill((4, 10, 22, 160))   # Capa semi-transparente sobre el fondo real
+        surface.blit(overlay, (0, 0))
 
-        y = SCREEN_H // 2 - 180 + int(8 * math.sin(self._t * 2.1))
-        title_shadow = self._font_title.render("FROSTBOUND PAWS", True, (20, 40, 58))
-        title = self._font_title.render("FROSTBOUND PAWS", True, (210, 245, 255))
-        tx = SCREEN_W // 2 - title.get_width() // 2
+        # Título
+        y = SCREEN_H // 2 - 190 + int(7 * math.sin(self._t * 2.0))
 
-        glow = pygame.Surface((title.get_width() + 70, title.get_height() + 40), pygame.SRCALPHA)
-        pygame.draw.ellipse(glow, (130, 215, 255, 48), glow.get_rect())
-        surface.blit(glow, (tx - 35, y - 12))
-        surface.blit(title_shadow, (tx + 6, y + 8))
-        surface.blit(title, (tx, y))
+        # Sombra
+        title_shadow = self._font_title.render("GARRAS GLACIARES", True, (14, 32, 50))
+        title_surf   = self._font_title.render("GARRAS GLACIARES", True, (210, 245, 255))
+        tx = SCREEN_W // 2 - title_surf.get_width() // 2
 
-        sub = self._font_sub.render("Polar Bear Indie Adventure", True, (150, 225, 255))
-        surface.blit(sub, (SCREEN_W // 2 - sub.get_width() // 2, y + 120))
+        # Resplandor suave
+        glow = pygame.Surface((title_surf.get_width() + 60, title_surf.get_height() + 36), pygame.SRCALPHA)
+        glow_alpha = int(38 + 18 * math.sin(self._t * 1.8))
+        pygame.draw.ellipse(glow, (120, 200, 255, glow_alpha), glow.get_rect())
+        surface.blit(glow, (tx - 30, y - 10))
+        surface.blit(title_shadow, (tx + 5, y + 7))
+        surface.blit(title_surf,   (tx, y))
 
-        alpha = int(180 + 75 * pulse(self._t, 1.8))
-        hint = self._font_hint.render("Press ENTER to start expedition", True, C_WHITE)
+        # Subtítulo
+        sub = self._font_sub.render("Aventura Indie de Oso Polar", True, (145, 215, 255))
+        surface.blit(sub, (SCREEN_W // 2 - sub.get_width() // 2, y + 108))
+
+        # Pulsante "Presionar tecla"
+        alpha = int(175 + 80 * pulse(self._t, 1.7))
+        hint  = self._font_hint.render("Presiona ENTER para comenzar la expedición", True, C_WHITE)
         hint.set_alpha(alpha)
-        surface.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 52))
+        surface.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 56))
 
-        ctrl = self._font_hint.render("Arrows/A,D Move   Space Jump   R Restart", True, (155, 216, 248))
-        surface.blit(ctrl, (SCREEN_W // 2 - ctrl.get_width() // 2, SCREEN_H - 45))
+        # Controles
+        ctrl = self._font_hint.render("← → / A,D Mover     Espacio Saltar     R Reiniciar", True, (145, 206, 240))
+        surface.blit(ctrl, (SCREEN_W // 2 - ctrl.get_width() // 2, SCREEN_H - 42))
 
     def handle_event(self, event):
-        return event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE)
+        return event.type == pygame.KEYDOWN and event.key in (
+            pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE
+        )
 
 
 class WinScreen:
     def __init__(self):
         pygame.font.init()
-        self._font_big = pygame.font.SysFont("impact", 84)
-        self._font_sm = pygame.font.SysFont("consolas", 24)
+        self._font_big = _load_font(76, bold=True)
+        self._font_sm  = _load_font(22)
         self._t = 0.0
 
     def update(self, dt):
@@ -59,28 +84,29 @@ class WinScreen:
 
     def draw(self, surface, time_str="", coin_count=0, secret_open=False):
         dim = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        dim.fill((5, 16, 28, 198))
+        dim.fill((4, 14, 26, 205))
         surface.blit(dim, (0, 0))
 
-        col = (200, int(210 + 45 * pulse(self._t, 2.2)), 255)
-        txt = self._font_big.render("EXPEDITION COMPLETE", True, col)
-        tx = SCREEN_W // 2 - txt.get_width() // 2
-        ty = SCREEN_H // 2 - 120
+        col = (200, int(208 + 47 * pulse(self._t, 2.1)), 255)
+        txt = self._font_big.render("EXPEDICIÓN COMPLETADA", True, col)
+        tx  = SCREEN_W // 2 - txt.get_width() // 2
+        ty  = SCREEN_H // 2 - 130
         surface.blit(txt, (tx, ty))
 
         if time_str:
-            ts = self._font_sm.render(f"Time: {time_str}", True, (220, 240, 255))
-            surface.blit(ts, (SCREEN_W // 2 - ts.get_width() // 2, ty + 100))
+            ts = self._font_sm.render(f"Tiempo: {time_str}", True, (220, 240, 255))
+            surface.blit(ts, (SCREEN_W // 2 - ts.get_width() // 2, ty + 105))
 
-        rel = self._font_sm.render(f"Relics: {coin_count}/3", True, (220, 240, 255))
-        surface.blit(rel, (SCREEN_W // 2 - rel.get_width() // 2, ty + 136))
-        sec = "Secret Cleared" if secret_open else "Secret Locked"
-        sec_col = (160, 245, 255) if secret_open else (220, 220, 235)
-        ss = self._font_sm.render(sec, True, sec_col)
-        surface.blit(ss, (SCREEN_W // 2 - ss.get_width() // 2, ty + 170))
+        rel = self._font_sm.render(f"Reliquias: {coin_count}/3", True, (220, 240, 255))
+        surface.blit(rel, (SCREEN_W // 2 - rel.get_width() // 2, ty + 140))
 
-        hint = self._font_sm.render("ENTER Restart   ESC Quit", True, (140, 210, 245))
-        surface.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 90))
+        sec     = "Secreto Completado ✦" if secret_open else "Secreto Bloqueado ◈"
+        sec_col = (120, 245, 215) if secret_open else (200, 215, 230)
+        ss      = self._font_sm.render(sec, True, sec_col)
+        surface.blit(ss, (SCREEN_W // 2 - ss.get_width() // 2, ty + 175))
+
+        hint = self._font_sm.render("ENTER Reiniciar   ESC Salir", True, (130, 200, 240))
+        surface.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H // 2 + 100))
 
     def handle_event(self, event):
         if event.type != pygame.KEYDOWN:

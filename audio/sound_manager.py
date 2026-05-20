@@ -1,10 +1,12 @@
+"""Generador de SFX procedurales con protección anti-spam por canal."""
 import math
 import random
 import pygame
 from config import VOL_MUSIC, VOL_SFX
 
 
-def _gen_wave(freq=440, duration=0.15, volume=0.6, wave_type="sine", sample_rate=44100, envelope=(0.01, 0.0, 0.8, 0.05), pitch_sweep=0.0):
+def _gen_wave(freq=440, duration=0.15, volume=0.6, wave_type="sine",
+              sample_rate=44100, envelope=(0.01, 0.0, 0.8, 0.05), pitch_sweep=0.0):
     n_samples = int(sample_rate * duration)
     a, d, s, r = envelope
     frames = bytearray()
@@ -48,22 +50,37 @@ class SoundManager:
     def __init__(self):
         self._sfx = {}
         self._muted = False
+        # Cooldown interno por nombre de SFX (segundos) para evitar replay por frame
+        self._last_played = {}
+        self._sfx_min_gap = {
+            "land":      0.22,
+            "jump":      0.10,
+            "bounce":    0.18,
+            "hurt":      0.35,
+            "death":     1.80,
+            "victory":   0.80,
+            "menu_click":0.08,
+            "boss_hit":  0.12,
+            "boss_die":  2.00,
+            "powerup":   0.50,
+            "checkpoint":0.50,
+        }
         pygame.mixer.set_num_channels(16)
         self._build_sfx()
 
     def _build_sfx(self):
         defs = {
-            "jump": dict(freq=380, duration=0.14, wave_type="sine", pitch_sweep=6, volume=0.5, envelope=(0.01, 0.05, 0.4, 0.3)),
-            "land": dict(freq=120, duration=0.12, wave_type="noise", volume=0.4, envelope=(0.001, 0.05, 0.2, 0.5)),
-            "bounce": dict(freq=500, duration=0.2, wave_type="sine", pitch_sweep=8, volume=0.6, envelope=(0.01, 0.1, 0.5, 0.2)),
-            "death": dict(freq=220, duration=0.5, wave_type="square", pitch_sweep=-18, volume=0.5, envelope=(0.01, 0.1, 0.7, 0.1)),
-            "checkpoint": dict(freq=660, duration=0.35, wave_type="sine", pitch_sweep=5, volume=0.5, envelope=(0.02, 0.1, 0.6, 0.2)),
-            "victory": dict(freq=880, duration=0.6, wave_type="sine", pitch_sweep=12, volume=0.5, envelope=(0.02, 0.1, 0.8, 0.1)),
-            "menu_click": dict(freq=600, duration=0.06, wave_type="sine", volume=0.3, envelope=(0.005, 0.05, 0.3, 0.5)),
-            "boss_hit": dict(freq=160, duration=0.2, wave_type="noise", volume=0.7, envelope=(0.001, 0.05, 0.6, 0.3)),
-            "boss_die": dict(freq=80, duration=1.0, wave_type="square", pitch_sweep=-24, volume=0.7, envelope=(0.01, 0.2, 0.7, 0.1)),
-            "powerup": dict(freq=440, duration=0.3, wave_type="tri", pitch_sweep=18, volume=0.5, envelope=(0.01, 0.1, 0.7, 0.2)),
-            "hurt": dict(freq=200, duration=0.2, wave_type="noise", volume=0.5, envelope=(0.001, 0.08, 0.4, 0.4)),
+            "jump":      dict(freq=380, duration=0.14, wave_type="sine", pitch_sweep=6,  volume=0.5, envelope=(0.01, 0.05, 0.4, 0.3)),
+            "land":      dict(freq=120, duration=0.12, wave_type="noise", volume=0.38,   envelope=(0.001, 0.05, 0.2, 0.5)),
+            "bounce":    dict(freq=500, duration=0.2,  wave_type="sine", pitch_sweep=8,  volume=0.55, envelope=(0.01, 0.1, 0.5, 0.2)),
+            "death":     dict(freq=220, duration=0.5,  wave_type="square", pitch_sweep=-18, volume=0.5, envelope=(0.01, 0.1, 0.7, 0.1)),
+            "checkpoint":dict(freq=660, duration=0.35, wave_type="sine", pitch_sweep=5,  volume=0.45, envelope=(0.02, 0.1, 0.6, 0.2)),
+            "victory":   dict(freq=880, duration=0.6,  wave_type="sine", pitch_sweep=12, volume=0.45, envelope=(0.02, 0.1, 0.8, 0.1)),
+            "menu_click":dict(freq=600, duration=0.06, wave_type="sine", volume=0.28,    envelope=(0.005, 0.05, 0.3, 0.5)),
+            "boss_hit":  dict(freq=160, duration=0.2,  wave_type="noise", volume=0.65,   envelope=(0.001, 0.05, 0.6, 0.3)),
+            "boss_die":  dict(freq=80,  duration=1.0,  wave_type="square", pitch_sweep=-24, volume=0.65, envelope=(0.01, 0.2, 0.7, 0.1)),
+            "powerup":   dict(freq=440, duration=0.3,  wave_type="tri",  pitch_sweep=18, volume=0.45, envelope=(0.01, 0.1, 0.7, 0.2)),
+            "hurt":      dict(freq=200, duration=0.2,  wave_type="noise", volume=0.45,   envelope=(0.001, 0.08, 0.4, 0.4)),
         }
         for name, kwargs in defs.items():
             try:
@@ -79,6 +96,14 @@ class SoundManager:
         snd = self._sfx.get(name)
         if snd is None:
             return
+
+        # Cooldown interno de SoundManager (segunda línea de defensa)
+        now = pygame.time.get_ticks() / 1000.0
+        gap = self._sfx_min_gap.get(name, 0.04)
+        if now - self._last_played.get(name, 0.0) < gap:
+            return
+        self._last_played[name] = now
+
         if volume_override is not None:
             snd.set_volume(volume_override)
         ch = pygame.mixer.find_channel(True)
@@ -93,17 +118,8 @@ class SoundManager:
             pygame.mixer.unpause()
 
     def play_music(self, theme="game"):
-        import os
-        path_map = {
-            "game": "assets/music_game.ogg",
-            "boss": "assets/music_boss.ogg",
-            "menu": "assets/music_menu.ogg",
-        }
-        path = path_map.get(theme, "")
-        if os.path.exists(path):
-            pygame.mixer.music.load(path)
-            pygame.mixer.music.set_volume(VOL_MUSIC)
-            pygame.mixer.music.play(-1)
+        """Compatibilidad: delegado al AudioSystem principal."""
+        pass
 
     def stop_music(self):
         pygame.mixer.music.stop()

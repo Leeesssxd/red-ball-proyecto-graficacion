@@ -1,87 +1,147 @@
-"""HUD and transient overlay (arctic style)."""
+"""HUD inferior minimalista + overlay de mensajes — Garras Glaciares."""
 import pygame
 import math
 from config import SCREEN_W, SCREEN_H, C_HUD_TEXT, C_CYAN, C_GOAL, C_WHITE
 
 
+def _load_font(size, bold=False):
+    """Carga fuente pixel art limpia disponible en el sistema."""
+    candidates = [
+        "Courier New",   # monospace limpio
+        "Lucida Console",
+        "Consolas",
+        "DejaVu Sans Mono",
+        "monospace",
+    ]
+    for name in candidates:
+        try:
+            f = pygame.font.SysFont(name, size, bold=bold)
+            if f:
+                return f
+        except Exception:
+            pass
+    return pygame.font.Font(None, size)
+
+
 class HUD:
     def __init__(self):
         pygame.font.init()
-        self._font_big = pygame.font.SysFont("consolas", 24, bold=True)
-        self._font_med = pygame.font.SysFont("consolas", 18)
-        self._font_sm = pygame.font.SysFont("consolas", 14)
-        self._elapsed = 0.0
+        self._font_big = _load_font(22, bold=True)
+        self._font_med = _load_font(17)
+        self._font_sm  = _load_font(14)
+        self._elapsed  = 0.0
 
     def update(self, dt):
         self._elapsed += dt
 
-    def draw(self, surface, level_title, level_num, total_levels, player, timer_secs, coin_count, secret_unlocked):
-        panel = pygame.Surface((560, 90), pygame.SRCALPHA)
-        panel.fill((8, 18, 34, 178))
-        pygame.draw.rect(panel, (130, 225, 255, 100), panel.get_rect(), 1)
-        surface.blit(panel, (10, 10))
+    # ------------------------------------------------------------------
+    # Panel principal — zona INFERIOR IZQUIERDA
+    # ------------------------------------------------------------------
+    def draw(self, surface, level_title, level_num, total_levels,
+             player, timer_secs, coin_count, secret_unlocked):
 
-        lev = self._font_big.render(f"{level_num:02d}/{total_levels:02d} {level_title}", True, C_CYAN)
-        surface.blit(lev, (18, 14))
+        # ── Panel de fondo inferior izquierdo ──
+        PW, PH = 520, 76
+        PX, PY = 10, SCREEN_H - PH - 10   # esquina inferior izquierda
 
+        panel = pygame.Surface((PW, PH), pygame.SRCALPHA)
+        panel.fill((6, 14, 28, 185))
+        pygame.draw.rect(panel, (100, 200, 255, 80), panel.get_rect(), 1)
+        surface.blit(panel, (PX, PY))
+
+        # ── Nivel y nombre ──
+        lev_txt = f"ZONA {level_num:02d}/{total_levels:02d}  {level_title}"
+        lev = self._font_big.render(lev_txt, True, C_CYAN)
+        surface.blit(lev, (PX + 10, PY + 8))
+
+        # ── Tiempo ──
         mins = int(timer_secs) // 60
         secs = int(timer_secs) % 60
-        ms = int((timer_secs % 1) * 100)
-        tim = self._font_med.render(f"TIME {mins:02d}:{secs:02d}.{ms:02d}", True, C_HUD_TEXT)
-        surface.blit(tim, (18, 46))
+        ms   = int((timer_secs % 1) * 100)
+        tim  = self._font_med.render(f"TIEMPO  {mins:02d}:{secs:02d}.{ms:02d}", True, C_HUD_TEXT)
+        surface.blit(tim, (PX + 10, PY + 38))
 
-        coin_txt = self._font_med.render(f"Relics: {coin_count}/3", True, (236, 246, 255))
-        surface.blit(coin_txt, (240, 46))
-        gate = "Secret Gate: OPEN" if secret_unlocked else "Secret Gate: LOCKED"
-        gate_col = (150, 240, 255) if secret_unlocked else (220, 230, 255)
-        gate_txt = self._font_sm.render(gate, True, gate_col)
-        surface.blit(gate_txt, (420, 50))
+        # ── Reliquias ──
+        rel_col = (255, 215, 0) if coin_count > 0 else (180, 210, 240)
+        rel = self._font_med.render(f"RELIQUIAS  {coin_count}/3", True, rel_col)
+        surface.blit(rel, (PX + 230, PY + 38))
 
-        if self._elapsed < 8.0:
-            alpha = int(255 * min(1.0, (8.0 - self._elapsed) / 1.8))
-            hint = self._font_sm.render("MOVE: ARROWS / A,D   JUMP: SPACE   RESTART: R", True, (175, 220, 255))
+        # ── Puerta secreta ──
+        if secret_unlocked:
+            gate_txt = self._font_sm.render("✦ SECRETA ABIERTA", True, (100, 255, 220))
+        else:
+            gate_txt = self._font_sm.render("◈ SECRETA BLOQUEADA", True, (180, 210, 240))
+        surface.blit(gate_txt, (PX + 10, PY + 57))
+
+        # ── Barra de vida del jugador (corazones) ──
+        self._draw_hp(surface, player, PX + 320, PY + 56)
+
+        # ── Hint de controles al inicio ──
+        if self._elapsed < 7.0:
+            alpha = int(255 * min(1.0, (7.0 - self._elapsed) / 1.5))
+            hint = self._font_sm.render(
+                "MOVER: ← → / A,D     SALTAR: ESPACIO     REINICIAR: R",
+                True, (170, 215, 255)
+            )
             hint.set_alpha(alpha)
-            surface.blit(hint, (16, SCREEN_H - 28))
+            surface.blit(hint, (SCREEN_W // 2 - hint.get_width() // 2, SCREEN_H - 102))
 
+    def _draw_hp(self, surface, player, x, y):
+        """Dibuja indicador de estado del personaje."""
+        if not player:
+            return
+        is_hurt = player.hurt_timer > 0
+        col = (255, 80, 80) if is_hurt else (80, 220, 120)
+        label = self._font_sm.render("❤ VIVO" if not is_hurt else "! DAÑO", True, col)
+        surface.blit(label, (x, y))
+
+    # ------------------------------------------------------------------
+    # Barra de progreso — parte superior centrada, fina y discreta
+    # ------------------------------------------------------------------
     def draw_progress_bar(self, surface, px, level_w):
-        bar_w = SCREEN_W - 40
-        bar_h = 8
-        bx, by = 20, 6
-        frac = min(1.0, max(0.0, px / max(1, level_w)))
-        fill = int(bar_w * frac)
-        pygame.draw.rect(surface, (20, 38, 60), (bx, by, bar_w, bar_h), border_radius=4)
+        bar_w = SCREEN_W - 60
+        bar_h = 5
+        bx    = 30
+        by    = 8      # arriba pero muy delgada (5px)
+        frac  = min(1.0, max(0.0, px / max(1, level_w)))
+        fill  = int(bar_w * frac)
+
+        pygame.draw.rect(surface, (15, 30, 50, 180), (bx, by, bar_w, bar_h), border_radius=3)
         if fill > 0:
-            pygame.draw.rect(surface, (120, 220, 255), (bx, by, fill, bar_h), border_radius=4)
-        pygame.draw.circle(surface, (220, 245, 255), (bx + fill, by + bar_h // 2), 5)
-        pygame.draw.circle(surface, C_GOAL, (bx + bar_w, by + bar_h // 2), 5)
+            pygame.draw.rect(surface, (80, 190, 255), (bx, by, fill, bar_h), border_radius=3)
+        # Punto jugador
+        pygame.draw.circle(surface, (200, 240, 255), (bx + fill, by + bar_h // 2), 4)
+        # Punto meta
+        pygame.draw.circle(surface, C_GOAL, (bx + bar_w, by + bar_h // 2), 4)
 
 
+# ======================================================================
 class MessageOverlay:
     def __init__(self):
         pygame.font.init()
-        self._font_h = pygame.font.SysFont("impact", 72, bold=True)
-        self._font_s = pygame.font.SysFont("consolas", 24)
-        self._msg = ""
-        self._sub = ""
-        self._timer = 0.0
-        self._dur = 0.0
+        self._font_h = _load_font(68, bold=True)
+        self._font_s = _load_font(22)
+        self._msg    = ""
+        self._sub    = ""
+        self._timer  = 0.0
+        self._dur    = 0.0
         self._colour = C_WHITE
 
     def show(self, msg, sub="", duration=2.0, colour=None):
         if not msg and not sub:
             self.clear()
             return
-        self._msg = msg
-        self._sub = sub
-        self._timer = duration
-        self._dur = duration
+        self._msg    = msg
+        self._sub    = sub
+        self._timer  = duration
+        self._dur    = duration
         self._colour = colour or C_WHITE
 
     def clear(self):
-        self._msg = ""
-        self._sub = ""
+        self._msg   = ""
+        self._sub   = ""
         self._timer = 0.0
-        self._dur = 0.0
+        self._dur   = 0.0
 
     def update(self, dt):
         if self._timer > 0:
@@ -94,13 +154,14 @@ class MessageOverlay:
     def draw(self, surface):
         if not self.active:
             return
-        t = self._dur - self._timer
-        alpha = int(min(255, t * 360))
+        t     = self._dur - self._timer
+        alpha = int(min(255, t * 380))
+
         dim = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        dim.fill((0, 8, 18, min(145, alpha)))
+        dim.fill((0, 6, 16, min(150, alpha)))
         surface.blit(dim, (0, 0))
 
-        bounce = int(6 * math.sin(t * 4))
+        bounce = int(5 * math.sin(t * 4.2))
         h_surf = self._font_h.render(self._msg, True, self._colour)
         h_surf.set_alpha(alpha)
         hx = SCREEN_W // 2 - h_surf.get_width() // 2
@@ -111,5 +172,5 @@ class MessageOverlay:
             s_surf = self._font_s.render(self._sub, True, C_HUD_TEXT)
             s_surf.set_alpha(alpha)
             sx = SCREEN_W // 2 - s_surf.get_width() // 2
-            sy = hy + h_surf.get_height() + 12
+            sy = hy + h_surf.get_height() + 10
             surface.blit(s_surf, (sx, sy))
