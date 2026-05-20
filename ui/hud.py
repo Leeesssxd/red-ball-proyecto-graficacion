@@ -1,13 +1,13 @@
-"""HUD and transient overlay."""
+"""HUD and transient overlay (arctic style)."""
 import pygame
 import math
-from config import SCREEN_W, SCREEN_H, C_HUD_TEXT, C_CYAN, C_GOAL, C_BALL, C_WHITE
+from config import SCREEN_W, SCREEN_H, C_HUD_TEXT, C_CYAN, C_GOAL, C_WHITE
 
 
 class HUD:
     def __init__(self):
         pygame.font.init()
-        self._font_big = pygame.font.SysFont("consolas", 28, bold=True)
+        self._font_big = pygame.font.SysFont("consolas", 26, bold=True)
         self._font_med = pygame.font.SysFont("consolas", 18)
         self._font_sm = pygame.font.SysFont("consolas", 14)
         self._elapsed = 0.0
@@ -16,9 +16,9 @@ class HUD:
         self._elapsed += dt
 
     def draw(self, surface, level_title, level_num, total_levels, player, timer_secs):
-        panel = pygame.Surface((420, 78), pygame.SRCALPHA)
-        panel.fill((6, 12, 28, 180))
-        pygame.draw.rect(panel, (0, 220, 255, 90), panel.get_rect(), 1)
+        panel = pygame.Surface((500, 82), pygame.SRCALPHA)
+        panel.fill((8, 18, 34, 178))
+        pygame.draw.rect(panel, (130, 225, 255, 100), panel.get_rect(), 1)
         surface.blit(panel, (10, 10))
 
         lev = self._font_big.render(f"{level_num:02d}/{total_levels:02d} {level_title}", True, C_CYAN)
@@ -30,22 +30,22 @@ class HUD:
         tim = self._font_med.render(f"TIME {mins:02d}:{secs:02d}.{ms:02d}", True, C_HUD_TEXT)
         surface.blit(tim, (18, 48))
 
-        if self._elapsed < 7.0:
-            alpha = int(255 * min(1.0, (7.0 - self._elapsed) / 1.5))
-            hint = self._font_sm.render("MOVE: ARROWS / A,D   JUMP: SPACE", True, (150, 200, 255))
+        if self._elapsed < 8.0:
+            alpha = int(255 * min(1.0, (8.0 - self._elapsed) / 1.8))
+            hint = self._font_sm.render("MOVE: ARROWS / A,D   JUMP: SPACE   RESTART: R", True, (175, 220, 255))
             hint.set_alpha(alpha)
             surface.blit(hint, (16, SCREEN_H - 28))
 
     def draw_progress_bar(self, surface, px, level_w):
         bar_w = SCREEN_W - 40
-        bar_h = 7
+        bar_h = 8
         bx, by = 20, 6
         frac = min(1.0, max(0.0, px / max(1, level_w)))
         fill = int(bar_w * frac)
-        pygame.draw.rect(surface, (20, 30, 50), (bx, by, bar_w, bar_h), border_radius=4)
+        pygame.draw.rect(surface, (20, 38, 60), (bx, by, bar_w, bar_h), border_radius=4)
         if fill > 0:
-            pygame.draw.rect(surface, C_CYAN, (bx, by, fill, bar_h), border_radius=4)
-        pygame.draw.circle(surface, C_BALL, (bx + fill, by + bar_h // 2), 5)
+            pygame.draw.rect(surface, (120, 220, 255), (bx, by, fill, bar_h), border_radius=4)
+        pygame.draw.circle(surface, (220, 245, 255), (bx + fill, by + bar_h // 2), 5)
         pygame.draw.circle(surface, C_GOAL, (bx + bar_w, by + bar_h // 2), 5)
 
 
@@ -88,12 +88,12 @@ class MessageOverlay:
         if not self.active:
             return
         t = self._dur - self._timer
-        alpha = int(min(255, t * 400))
+        alpha = int(min(255, t * 360))
         dim = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
-        dim.fill((0, 0, 0, min(140, alpha)))
+        dim.fill((0, 8, 18, min(145, alpha)))
         surface.blit(dim, (0, 0))
 
-        bounce = int(7 * math.sin(t * 4))
+        bounce = int(6 * math.sin(t * 4))
         h_surf = self._font_h.render(self._msg, True, self._colour)
         h_surf.set_alpha(alpha)
         hx = SCREEN_W // 2 - h_surf.get_width() // 2

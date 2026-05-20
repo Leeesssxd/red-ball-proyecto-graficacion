@@ -2,7 +2,7 @@
 import sys
 import pygame
 
-from config import SCREEN_W, SCREEN_H, FPS, TITLE, C_CYAN
+from config import SCREEN_W, SCREEN_H, FPS, TITLE, C_CYAN, VSYNC
 from graphics import Background, ParticleSystem
 from levels import LevelManager
 from ui import HUD, MessageOverlay, TitleScreen, WinScreen
@@ -18,7 +18,7 @@ class GameLoop:
     def __init__(self):
         pygame.init()
         pygame.display.set_caption(TITLE)
-        self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
+        self.screen = self._create_display()
         self.clock = pygame.time.Clock()
 
         self.bg = Background()
@@ -35,6 +35,12 @@ class GameLoop:
         self._run_timer = 0.0
         self._dead_wait = 0.0
         self._time_str = ""
+
+    def _create_display(self):
+        try:
+            return pygame.display.set_mode((SCREEN_W, SCREEN_H), vsync=1 if VSYNC else 0)
+        except TypeError:
+            return pygame.display.set_mode((SCREEN_W, SCREEN_H))
 
     def run(self):
         while True:
@@ -132,14 +138,18 @@ class GameLoop:
         if player and not player.alive:
             self._state = self.STATE_DEAD
             self._dead_wait = 1.2
-            self.overlay.show("GAME OVER", "R restart   ESC quit", duration=999.0, colour=(220, 40, 40))
+            self.overlay.show("FALLEN", "R restart   ESC quit", duration=999.0, colour=(210, 230, 255))
+
+        if player and player.hurt_timer > 0:
+            self.audio.play("hurt")
 
         if player and player.won:
             advanced = self.lm.next_level()
             if advanced:
                 self._timer = 0.0
                 self.parts = ParticleSystem()
-                self.overlay.show("LEVEL CLEAR", f"Next: {self.lm.current.title}", duration=1.8, colour=C_CYAN)
+                nxt = self.lm.current.biome if hasattr(self.lm.current, "biome") else self.lm.current.title
+                self.overlay.show("AREA CLEAR", f"Next: {nxt}", duration=1.8, colour=C_CYAN)
             else:
                 mins = int(self._run_timer) // 60
                 secs = int(self._run_timer) % 60

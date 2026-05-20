@@ -1,10 +1,10 @@
-"""Player – the rolling red ball."""
+"""Player controller with polar bear animation on top of existing physics."""
 import pygame
 import math
 from config import (GRAVITY, JUMP_FORCE, MAX_FALL, FRICTION,
-                    AIR_FRICTION, ACCEL, MAX_SPEED,
-                    C_BALL, C_BALL_SHINE)
+                    AIR_FRICTION, ACCEL, MAX_SPEED)
 from utils.helpers import clamp
+from player.polar_bear_sprite import PolarBearSpriteSet
 
 
 class Player:
@@ -19,9 +19,14 @@ class Player:
         self.was_ground = False
         self.alive = True
         self.won = False
+        self.hurt_timer = 0.0
+        self.death_timer = 0.0
         self._roll_angle = 0.0
         self._coyote = 0
         self._jump_buf = 0
+        self._anim_t = 0.0
+        self._sprites = PolarBearSpriteSet(scale=3)
+        self._facing = 1
 
     @property
     def rect(self) -> pygame.Rect:
@@ -37,8 +42,10 @@ class Player:
 
         if right:
             self.vx = clamp(self.vx + ACCEL, -MAX_SPEED, MAX_SPEED)
+            self._facing = 1
         elif left:
             self.vx = clamp(self.vx - ACCEL, -MAX_SPEED, MAX_SPEED)
+            self._facing = -1
         else:
             self.vx *= FRICTION if self.on_ground else AIR_FRICTION
             if abs(self.vx) < 0.03:
@@ -59,6 +66,7 @@ class Player:
 
     def move(self):
         if not self.alive:
+            self.death_timer += 1 / 60
             return
         self.was_ground = self.on_ground
         self.on_ground = False
@@ -67,6 +75,8 @@ class Player:
         self.x += self.vx
         self.y += self.vy
         self._roll_angle += self.vx * 4.0
+        self.hurt_timer = max(0.0, self.hurt_timer - 1 / 60)
+        self._anim_t += 1 / 60
 
     def resolve_platform(self, platform):
         if not self.alive or platform.gone:
@@ -80,8 +90,9 @@ class Player:
         dy = pr.centery - plr.centery
         overlap_x = (pr.width * 0.5 + plr.width * 0.5) - abs(dx)
         overlap_y = (pr.height * 0.5 + plr.height * 0.5) - abs(dy)
+        eps = 0.001
 
-        if overlap_x < overlap_y:
+        if overlap_x + eps < overlap_y:
             self.x += overlap_x if dx > 0 else -overlap_x
             self.vx = 0
             return True
@@ -123,9 +134,22 @@ class Player:
             return True
         return False
 
-    def draw(self, surface: pygame.Surface, cam):
+    def _state(self):
         if not self.alive:
-            return
+            return "death"
+        if self.hurt_timer > 0:
+            return "hurt"
+        if self.won:
+            return "win"
+        if not self.on_ground and self.vy < -1.2:
+            return "jump"
+        if not self.on_ground and self.vy >= -1.2:
+            return "fall"
+        if abs(self.vx) > 0.7:
+            return "walk"
+        return "idle"
+
+    def draw(self, surface: pygame.Surface, cam):
         sx, sy = cam.apply_xy(self.x, self.y)
         sx, sy = int(sx), int(sy)
 
@@ -135,19 +159,22 @@ class Player:
         pygame.draw.ellipse(shadow, (0, 0, 0, 75), shadow.get_rect())
         surface.blit(shadow, (sx - sh_w // 2, sy + self.RADIUS - 5))
 
-        rot_s = pygame.Surface((self.RADIUS * 2 + 6, self.RADIUS * 2 + 6), pygame.SRCALPHA)
-        cx = rot_s.get_width() // 2
-        cy = rot_s.get_height() // 2
-        pygame.draw.circle(rot_s, C_BALL, (cx, cy), self.RADIUS)
+        state = self._state()
+        frame = self._sprites.frame(state, self._anim_t)
+        if self._facing < 0:
+            frame = pygame.transform.flip(frame, True, False)
 
-        for offset in (-self.RADIUS // 2, 0, self.RADIUS // 2):
-            a = math.radians(self._roll_angle + offset * 8)
-            px = cx + int(math.cos(a) * self.RADIUS * 0.45)
-            py = cy + int(math.sin(a) * self.RADIUS * 0.45)
-            pygame.draw.circle(rot_s, (160, 14, 24, 120), (px, py), max(4, self.RADIUS // 4))
+        fx = sx - frame.get_width() // 2
+        fy = sy - frame.get_height() // 2 + 2
 
-        shine_r = self.RADIUS // 3
-        pygame.draw.circle(rot_s, C_BALL_SHINE + (205,), (cx - self.RADIUS // 3, cy - self.RADIUS // 3), shine_r)
-        pygame.draw.circle(rot_s, (255, 255, 255, 70), (cx - 4, cy + 4), self.RADIUS, 2)
+        if self.hurt_timer > 0 and int(self.hurt_timer * 20) % 2 == 0:
+            tint = pygame.Surface(frame.get_size(), pygame.SRCALPHA)
+            tint.fill((255, 180, 180, 80))
+            frame = frame.copy()
+            frame.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
-        surface.blit(rot_s, (sx - cx, sy - cy))
+        surface.blit(frame, (fx, fy))
+
+    @property
+    def speed(self):
+        return math.hypot(self.vx, self.vy)

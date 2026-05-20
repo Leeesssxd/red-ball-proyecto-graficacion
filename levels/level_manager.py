@@ -1,13 +1,14 @@
 """Loads and manages levels from level_data."""
-import pygame
 from levels.level_data import LEVELS
 from entities import Platform, Spike, BouncePad, Goal, Player
 from graphics import Camera
+from boss.frost_guardian import FrostGuardian
 
 
 class Level:
     def __init__(self, data: dict):
         self.title = data.get("title", "Level")
+        self.biome = data.get("biome", "")
         self.level_w = data["level_w"]
         self.level_h = data["level_h"]
         self.kill_y = data.get("kill_y", self.level_h - 50)
@@ -18,6 +19,8 @@ class Level:
         self.bounce_pads = []
         self.goal = None
         self.player = None
+        self.boss = None
+        self._death_fx_done = False
 
         self._load(data)
 
@@ -36,11 +39,15 @@ class Level:
         if gd:
             self.goal = Goal(gd["x"], gd["y"], gd.get("size", 36))
 
+        bd = data.get("boss")
+        if bd:
+            self.boss = FrostGuardian(bd["x"], bd["y"])
+
         self.player = Player(*self.spawn)
 
     def update(self, keys, particles):
         if not self.player:
-            return {"jumped": False, "landed": False, "died": False, "bounced": False, "goal": False}
+            return {"jumped": False, "landed": False, "died": False, "bounced": False, "goal": False, "shake": 0.0}
 
         p = self.player
         was_buf = p._jump_buf
@@ -66,27 +73,45 @@ class Level:
                 bounced = True
 
         got_goal = False
-        if self.goal:
+        if self.goal and (not self.boss or not self.boss.alive):
             self.goal.update()
             if p.resolve_goal(self.goal):
                 particles.emit_goal(p.x, p.y)
                 got_goal = True
 
+        shake = 0.0
+        if self.boss:
+            self.boss.update(1 / 60, p)
+            bh = self.boss.resolve_hits(p)
+            if bh["boss_hit"]:
+                particles.emit_goal(self.boss.x, self.boss.y - 30)
+                shake = max(shake, 4.0)
+            if bh["player_hit"]:
+                p.hurt_timer = max(p.hurt_timer, 0.65)
+                shake = max(shake, 2.5)
+            if bh["boss_dead"]:
+                particles.emit_goal(self.boss.x, self.boss.y)
+                shake = max(shake, 6.0)
+
         landed = p.on_ground and not p.was_ground
         if landed:
             particles.emit_land(p.x, p.y + p.RADIUS)
+            if abs(p.vy) > 5:
+                shake = max(shake, 1.2)
         if abs(p.vx) > 2 and p.on_ground:
             particles.emit_roll(p.x, p.y + p.RADIUS, p.vx)
 
         died = False
         if p.y > self.kill_y and p.alive:
             p.alive = False
-        if not p.alive and p.was_ground != "dead_done":
-            particles.emit_death(p.x, p.y)
-            p.was_ground = "dead_done"
-            died = True
 
-        return {"jumped": jumped, "landed": landed, "died": died, "bounced": bounced, "goal": got_goal}
+        if not p.alive and not self._death_fx_done:
+            particles.emit_death(p.x, p.y)
+            self._death_fx_done = True
+            died = True
+            shake = max(shake, 5.0)
+
+        return {"jumped": jumped, "landed": landed, "died": died, "bounced": bounced, "goal": got_goal, "shake": shake}
 
     def draw(self, surface, cam):
         for plat in self.platforms:
@@ -97,6 +122,8 @@ class Level:
             bp.draw(surface, cam)
         if self.goal:
             self.goal.draw(surface, cam)
+        if self.boss:
+            self.boss.draw(surface, cam)
         if self.player:
             self.player.draw(surface, cam)
 
@@ -138,6 +165,8 @@ class LevelManager:
         events = self.current.update(keys, particles)
         if p:
             self.camera.update(p.x, p.y)
+            if events.get("shake", 0) > 0:
+                self.camera.add_shake(events["shake"])
         return events
 
     def draw(self, surface):

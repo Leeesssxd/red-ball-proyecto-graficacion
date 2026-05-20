@@ -1,4 +1,4 @@
-"""Particle system for movement and impact feedback."""
+"""Particle system for movement and impact feedback (arctic polish)."""
 import pygame
 import random
 import math
@@ -18,8 +18,8 @@ class Particle:
     def update(self):
         self.x += self.vx
         self.y += self.vy
-        self.vy += 0.16
-        self.vx *= 0.96
+        self.vy += 0.13
+        self.vx *= 0.97
         self.life -= 1
 
     @property
@@ -42,32 +42,33 @@ class ParticleSystem:
         self._particles = []
 
     def emit_jump(self, x, y):
-        for _ in range(14):
-            angle = random.uniform(math.pi, 2 * math.pi)
-            speed = random.uniform(1.8, 4.4)
-            self._particles.append(Particle(x, y, math.cos(angle) * speed, math.sin(angle) * speed, random.randint(14, 28), (200, 220, 255), random.randint(2, 5)))
+        for _ in range(12):
+            a = random.uniform(math.pi, 2 * math.pi)
+            sp = random.uniform(1.6, 4.0)
+            self._particles.append(Particle(x, y, math.cos(a) * sp, math.sin(a) * sp, random.randint(14, 26), (205, 235, 255), random.randint(2, 4)))
 
     def emit_land(self, x, y):
         for _ in range(10):
-            self._particles.append(Particle(x + random.uniform(-14, 14), y, random.uniform(-2.6, 2.6), random.uniform(-1.8, 0.4), random.randint(10, 18), (120, 190, 255), random.randint(2, 4)))
+            self._particles.append(Particle(x + random.uniform(-14, 14), y, random.uniform(-2.4, 2.4), random.uniform(-1.5, 0.2), random.randint(9, 18), (170, 220, 255), random.randint(2, 4)))
 
     def emit_death(self, x, y):
-        for _ in range(42):
-            angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(2.0, 8.5)
-            self._particles.append(Particle(x, y, math.cos(angle) * speed, math.sin(angle) * speed, random.randint(24, 56), (230, 45, 60), random.randint(3, 8)))
+        for _ in range(36):
+            a = random.uniform(0, 2 * math.pi)
+            sp = random.uniform(2.0, 7.2)
+            c = random.choice([(240, 245, 255), (180, 225, 255), (120, 180, 230)])
+            self._particles.append(Particle(x, y, math.cos(a) * sp, math.sin(a) * sp, random.randint(24, 56), c, random.randint(3, 7)))
 
     def emit_goal(self, x, y):
-        for _ in range(68):
-            angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(1.8, 6.4)
-            col = random.choice([(255, 220, 30), (255, 140, 0), (255, 255, 110)])
-            self._particles.append(Particle(x, y, math.cos(angle) * speed, math.sin(angle) * speed, random.randint(35, 72), col, random.randint(3, 9)))
+        for _ in range(56):
+            a = random.uniform(0, 2 * math.pi)
+            sp = random.uniform(1.6, 6.1)
+            c = random.choice([(170, 230, 255), (240, 255, 255), (120, 180, 235)])
+            self._particles.append(Particle(x, y, math.cos(a) * sp, math.sin(a) * sp, random.randint(32, 66), c, random.randint(3, 8)))
 
     def emit_roll(self, x, y, vx):
         if random.random() > 0.35:
             return
-        self._particles.append(Particle(x + random.uniform(-4, 4), y + 8, vx * 0.2 + random.uniform(-0.5, 0.5), random.uniform(-0.8, 0.0), random.randint(8, 15), (65, 135, 210), random.randint(2, 4)))
+        self._particles.append(Particle(x + random.uniform(-4, 4), y + 8, vx * 0.2 + random.uniform(-0.4, 0.4), random.uniform(-0.6, -0.05), random.randint(8, 14), (130, 190, 230), random.randint(2, 3)))
 
     def update(self):
         self._particles = [p for p in self._particles if p.alive]

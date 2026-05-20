@@ -1,5 +1,16 @@
+# runtime
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 *.zip
+
+# local envs
+venv/
+.venv/
+
+# os/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
